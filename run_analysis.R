@@ -37,8 +37,12 @@ subject <- rbind(subject_train, subject_test)
 # ------------------------------------------------------
 # 2) Extracts only the measurements on the mean and standard deviation for each measurement.
 # ------------------------------------------------------
-meanMeasurement <- apply(X, 2, mean)
-sdMeasurement <- apply(X, 2, sd)
+variableNames <- read.table("./dataset/UCI HAR Dataset/features.txt")
+variableNames <- as.character(variableNames[,2])
+
+# Select only features related to mean and sd
+variableNamesSel <- variableNames[grepl("mean()",variableNames) | grepl("std()",variableNames)]
+X             <- X[ ,grepl("mean()",variableNames) | grepl("std()",variableNames)] 
 
 # ------------------------------------------------------
 # 3) Uses descriptive activity names to name the activities in the data set
@@ -53,30 +57,8 @@ yExt <- sqldf("SELECT a.V1 as value, b.V2 as Label
 # ------------------------------------------------------
 # 4) Appropriately labels the data set with descriptive variable names.
 # ------------------------------------------------------
-variableNames <- read.table("./dataset/UCI HAR Dataset/features.txt")
-variableNames <- as.character(variableNames[,2])
-
-# # rename "variableNames" to a usable feature names:
-variableNames <- variableNames %>% str_replace("-","_") %>%
-  str_replace("\\(","") %>%
-  str_replace("\\)","") %>%
-  str_replace(",","_") %>%
-  str_replace("-","_")
-
-
-# find duplicate colnames and rename with an index:
-for(i in variableNames){
-  matchIdx <- which(i == variableNames)
-  
-  if(length(matchIdx) > 1){ # case of duplicity
-    aux_index <- seq(1,length(matchIdx))
-    variableNames[matchIdx] <- paste(variableNames[min(matchIdx)],as.character(aux_index), sep = "_")
-  }
-}
-
-
 # use as column names
-colnames(X) <- variableNames
+colnames(X) <- variableNamesSel
 
 # generate a final scoring data-set:
 scoringDataSet <- cbind(response = yExt$Label, X, subjectID = subject$V1)
@@ -91,5 +73,4 @@ scoringDataSetAggregated <- scoringDataSet %>% group_by(response, subjectID) %>%
 # ------------------------------------------------------
 # Save the output
 # ------------------------------------------------------
-
 write.table(scoringDataSetAggregated, "tidyDataSet.txt", row.name = FALSE) 
